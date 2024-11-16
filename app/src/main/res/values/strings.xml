@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PublisherApplication</string>
+    <string name="not_publishing_location">Location is NOT being published at this time</string>
+    <string name="publishing_location">Location is being published</string>
+</resources>
