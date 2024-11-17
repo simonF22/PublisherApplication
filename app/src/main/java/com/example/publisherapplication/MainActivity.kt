@@ -70,6 +70,8 @@ class MainActivity : AppCompatActivity() {
                     fastestInterval = 5000
                     priority = LocationRequest.PRIORITY_HIGH_ACCURACY
                 }
+
+                /* CALLBACK FOR WHEN LOCATION INFORMATION RECEIVED FROM HARDWARE */
                 locationCallback = object : LocationCallback() {
                     override fun onLocationResult(locationResult: LocationResult) {
                         for (location in locationResult.locations) {
@@ -86,7 +88,7 @@ class MainActivity : AppCompatActivity() {
 
                             Log.d("LocationData", locationData)
 
-                            /* PUBLISH LOCATION INFORMATION TO BROKER */
+                            /* PUBLISH TO BROKER WHEN LOCATION INFORMATION RECEIVED*/
                             try {
                                 client?.publishWith()?.topic("the/location")?.payload(locationData.toByteArray())?.send()
                             } catch (e: Exception) {
@@ -97,6 +99,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
                 try {
+                    /* CONNECT TO BROKER */
                     client?.connect()
                     Toast.makeText(this,"Successfully connected to broker", Toast.LENGTH_SHORT).show()
                     tvStatusMessage.text = getString(R.string.publishing_location)
