@@ -1,10 +1,5 @@
 package com.example.publisherapplication
 
-import android.content.Context
-import android.icu.text.SimpleDateFormat
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -21,23 +16,18 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationSettingsRequest
-import com.google.android.gms.location.LocationSettingsResponse
-import com.google.android.gms.location.SettingsClient
-import com.google.android.gms.tasks.Task
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client
-import java.util.Date
-import java.util.Locale
 import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var locationManager: LocationManager
-    private var isPublishing: Boolean = false
-    private var client: Mqtt5BlockingClient? = null
     private var studentID : String = ""
+
+    private var client: Mqtt5BlockingClient? = null
+    private var isPublishing: Boolean = false
     private lateinit var tvStatusMessage: TextView
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest : LocationRequest
     private lateinit var locationCallback: LocationCallback
@@ -52,11 +42,10 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        //locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         tvStatusMessage = findViewById(R.id.tvStatusMessage)
         tvStatusMessage.text = getString(R.string.not_publishing_location)
 
-
+        /* SET UP BROKER */
         client = Mqtt5Client.builder()
             .identifier(UUID.randomUUID().toString())
             .serverHost("broker-816028524.sundaebytestt.com")
@@ -65,19 +54,20 @@ class MainActivity : AppCompatActivity() {
             .toBlocking()
     }
 
-
-
+    /* CALLED WHEN 'START PUBLISHING' BUTTON PRESSED - starts receiving location information from hardware and connects to broker*/
     fun startLocationPublish(view: View?) {
         if (isPublishing) {
             Toast.makeText(this, "Location already being published", Toast.LENGTH_SHORT).show()
             return
         }
+        /* VERIFY STUDENT ID FIRST */
         if (isValidStudentID()) {
             try {
+                /* SET UP LOCATION SERVICE */
                 fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
                 locationRequest = LocationRequest.create().apply {
-                    interval = 10000 // 10 seconds (adjust as needed)
-                    fastestInterval = 5000 // Minimum interval for updates
+                    interval = 10000
+                    fastestInterval = 5000
                     priority = LocationRequest.PRIORITY_HIGH_ACCURACY
                 }
                 locationCallback = object : LocationCallback() {
@@ -96,6 +86,7 @@ class MainActivity : AppCompatActivity() {
 
                             Log.d("LocationData", locationData)
 
+                            /* PUBLISH LOCATION INFORMATION TO BROKER */
                             try {
                                 client?.publishWith()?.topic("the/location")?.payload(locationData.toByteArray())?.send()
                             } catch (e: Exception) {
@@ -110,7 +101,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this,"Successfully connected to broker", Toast.LENGTH_SHORT).show()
                     tvStatusMessage.text = getString(R.string.publishing_location)
                 } catch (e:Exception){
-                    //locationManager.removeUpdates(this)
                     fusedLocationClient.removeLocationUpdates(locationCallback)
                     Toast.makeText(this,"An error occurred when connecting to broker", Toast.LENGTH_SHORT).show()
                 }
@@ -121,16 +111,16 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         } else {
-            Toast.makeText(this, "Please enter a valid Student ID", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please enter a valid Student ID in the range 816000000-816999999", Toast.LENGTH_SHORT).show()
         }
     }
 
+    /* CALLED WHEN 'STOP PUBLISHING' BUTTON PRESSED - disconnects from broker and stops receiving location information from hardware */
     fun stopLocationPublish(view: View?) {
         if (!isPublishing){
             Toast.makeText(this, "Location has already stopped being published", Toast.LENGTH_SHORT).show()
             return;
         }
-        //locationManager.removeUpdates(this)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         isPublishing = false
 
@@ -143,11 +133,12 @@ class MainActivity : AppCompatActivity() {
         tvStatusMessage.text = getString(R.string.not_publishing_location)
     }
 
+    /* HELPER METHOD TO VALIDATE STUDENT ID */
     private fun isValidStudentID(): Boolean {
         studentID = findViewById<EditText>(R.id.etEnterStudentID).text.toString()
 
         if (studentID.length == 9) {
-            val studentIdNumber = studentID.toLongOrNull() // Convert to Long to handle large numbers
+            val studentIdNumber = studentID.toLongOrNull()
             return studentIdNumber != null && studentIdNumber in 816000000..816999999
         }
         return false
